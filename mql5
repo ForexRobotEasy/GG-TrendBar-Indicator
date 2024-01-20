@@ -1,0 +1,100 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                      GG TrendBar Indicator |
+//|                                                  https://forexroboteasy.com |
+//+------------------------------------------------------------------+
+#property copyright 'Forex Robot Easy Team'
+#property link      'https://forexroboteasy.com'
+
+#property indicator_separate_window
+#property indicator_buffers 2
+#property indicator_color1 Blue
+#property indicator_color2 Red
+
+// input parameters
+input int ADXPeriod = 14;
+input ENUM_TIMEFRAMES Timeframe1 = PERIOD_M5;
+input ENUM_TIMEFRAMES Timeframe2 = PERIOD_M15;
+
+// global variables
+double TrendBuffer[];
+double SignalBuffer[];
+int barsToCheck;
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // ensure correct timeframe sequence
+    if (Timeframe1 > Timeframe2)
+    {
+        ENUM_TIMEFRAMES temp = Timeframe1;
+        Timeframe1 = Timeframe2;
+        Timeframe2 = temp;
+    }
+
+    // calculate number of bars to check
+    int bars1 = iBars(NULL, Timeframe1);
+    int bars2 = iBars(NULL, Timeframe2);
+    barsToCheck = MathMin(bars1, bars2);
+
+    // indicator buffers
+    SetIndexBuffer(0, TrendBuffer);
+    SetIndexBuffer(1, SignalBuffer);
+
+    // initialize the indicator
+    IndicatorShortName('GG TrendBar Indicator');
+    SetIndexLabel(0, 'Trend');
+    SetIndexLabel(1, 'Signal');
+    SetIndexStyle(0, DRAW_LINE);
+    SetIndexStyle(1, DRAW_LINE);
+    
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total, const int prev_calculated, const datetime &time[], const double &open[], const double &high[], const double &low[], const double &close[], const long &tick_volume[], const long &volume[], const int &spread[])
+{
+    // calculate ADX for both timeframes
+    double ADX1[];
+    double ADX2[];
+    CopyBuffer(NULL, Timeframe1, 0, barsToCheck, ADX1);
+    CopyBuffer(NULL, Timeframe2, 0, barsToCheck, ADX2);
+
+    // iterate through bars
+    for (int i = 0; i < barsToCheck; i++)
+    {
+        // check if ADX values are increasing
+        if (ADX1[i + 1] > ADX1[i] && ADX2[i + 1] > ADX2[i])
+        {
+            TrendBuffer[i] = 1; // bullish trend
+        }
+        else if (ADX1[i + 1] < ADX1[i] && ADX2[i + 1] < ADX2[i])
+        {
+            TrendBuffer[i] = -1; // bearish trend
+        }
+        else
+        {
+            TrendBuffer[i] = 0; // no trend
+        }
+
+        // generate signal based on trend alignment
+        if (TrendBuffer[i] == 1)
+        {
+            SignalBuffer[i] = 1; // buy signal
+        }
+        else if (TrendBuffer[i] == -1)
+        {
+            SignalBuffer[i] = -1; // sell signal
+        }
+        else
+        {
+            SignalBuffer[i] = 0; // no signal
+        }
+    }
+
+    return rates_total;
+}
